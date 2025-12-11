@@ -48,7 +48,8 @@ const Stocks: React.FC<StocksProps> = ({ user, stocks, onUpdate, totalAssets }) 
     setIsAnalyzing(true);
     setAnalysisResult(null);
     const result = await GeminiService.analyzePortfolio(stocks, totalAssets);
-    setAnalysisResult(result);
+    // Explicitly handle undefined/null to satisfy TypeScript strictness
+    setAnalysisResult(result || null);
     setIsAnalyzing(false);
   };
 

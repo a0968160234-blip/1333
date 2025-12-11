@@ -36,23 +36,36 @@ export const GeminiService = {
       const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/) || text.match(/```\s*([\s\S]*?)\s*```/);
       const jsonStr = jsonMatch ? jsonMatch[1] : text;
       
-      const priceMap: Record<string, number> = JSON.parse(jsonStr);
+      let priceMap: Record<string, number> = {};
+      try {
+        priceMap = JSON.parse(jsonStr);
+      } catch (e) {
+        console.error("Failed to parse price JSON", e);
+      }
 
       // Guideline: Must extract grounding chunks when using Google Search
       const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
       
       // Explicitly type the filtered array to ensure it matches the StockHolding['sources'] type
-      const sources: { uri: string; title: string }[] = groundingChunks
-        .map((chunk: any) => chunk.web ? { uri: chunk.web.uri, title: chunk.web.title } : null)
-        .filter((s: any): s is { uri: string; title: string } => s !== null);
+      const validSources: { uri: string; title: string }[] = groundingChunks
+        .map((chunk: any) => {
+          if (chunk.web && chunk.web.uri && chunk.web.title) {
+            return { uri: String(chunk.web.uri), title: String(chunk.web.title) };
+          }
+          return null;
+        })
+        .filter((s): s is { uri: string; title: string } => s !== null);
 
-      return holdings.map(h => ({
-        ...h,
-        currentPrice: priceMap[h.symbol] || h.currentPrice,
-        lastUpdated: new Date().toISOString(),
-        // Attach sources to the holdings (same sources for the batch query)
-        sources: sources.length > 0 ? sources : h.sources
-      }));
+      return holdings.map(h => {
+        // Prepare the new object with explicit typing for optional fields
+        const updatedStock: StockHolding = {
+          ...h,
+          currentPrice: priceMap[h.symbol] !== undefined ? priceMap[h.symbol] : h.currentPrice,
+          lastUpdated: new Date().toISOString(),
+          sources: validSources.length > 0 ? validSources : h.sources
+        };
+        return updatedStock;
+      });
 
     } catch (error) {
       console.error("Failed to update stock prices via Gemini:", error);
@@ -82,7 +95,7 @@ export const GeminiService = {
         model: 'gemini-2.5-flash',
         contents: prompt,
       });
-      return response.text || null;
+      return response.text ?? null;
     } catch (error) {
         console.error("Analysis failed:", error);
         return "暫時無法分析，請稍後再試。";
