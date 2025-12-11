@@ -40,9 +40,11 @@ export const GeminiService = {
 
       // Guideline: Must extract grounding chunks when using Google Search
       const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
-      const sources = groundingChunks
+      
+      // Explicitly type the filtered array to ensure it matches the StockHolding['sources'] type
+      const sources: { uri: string; title: string }[] = groundingChunks
         .map((chunk: any) => chunk.web ? { uri: chunk.web.uri, title: chunk.web.title } : null)
-        .filter((s: any) => s !== null);
+        .filter((s: any): s is { uri: string; title: string } => s !== null);
 
       return holdings.map(h => ({
         ...h,
@@ -58,7 +60,7 @@ export const GeminiService = {
     }
   },
 
-  analyzePortfolio: async (holdings: StockHolding[], totalAssets: number) => {
+  analyzePortfolio: async (holdings: StockHolding[], totalAssets: number): Promise<string | null> => {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
     const portfolioSummary = holdings.map(h => 
@@ -80,7 +82,7 @@ export const GeminiService = {
         model: 'gemini-2.5-flash',
         contents: prompt,
       });
-      return response.text;
+      return response.text || null;
     } catch (error) {
         console.error("Analysis failed:", error);
         return "暫時無法分析，請稍後再試。";
