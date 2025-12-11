@@ -1,6 +1,7 @@
+
 import React, { useState } from 'react';
 import { StockHolding, User } from '../types';
-import { Plus, Trash2, RefreshCw, BrainCircuit, Loader2 } from 'lucide-react';
+import { Plus, Trash2, RefreshCw, BrainCircuit, Loader2, Link as LinkIcon } from 'lucide-react';
 import { GeminiService } from '../services/gemini';
 
 interface StocksProps {
@@ -55,6 +56,11 @@ const Stocks: React.FC<StocksProps> = ({ user, stocks, onUpdate, totalAssets }) 
   const totalCost = stocks.reduce((sum, s) => sum + (s.shares * s.averageCost), 0);
   const totalPL = totalMarketValue - totalCost;
   const totalPLPercent = totalCost > 0 ? (totalPL / totalCost) * 100 : 0;
+
+  // Extract unique sources for display
+  const allSources = stocks
+    .flatMap(s => s.sources || [])
+    .filter((v, i, a) => a.findIndex(t => t.uri === v.uri) === i);
 
   return (
     <div className="space-y-6">
@@ -207,6 +213,30 @@ const Stocks: React.FC<StocksProps> = ({ user, stocks, onUpdate, totalAssets }) 
             </table>
         </div>
       </div>
+
+      {/* Grounding Sources */}
+      {allSources.length > 0 && (
+        <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 text-sm text-gray-500">
+           <div className="flex items-center gap-2 mb-2 font-medium text-gray-700">
+              <LinkIcon size={16} />
+              <span>股價資訊來源 (Google Search)</span>
+           </div>
+           <ul className="space-y-1 pl-6 list-disc">
+              {allSources.map((source, index) => (
+                <li key={index}>
+                  <a 
+                    href={source.uri} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="text-indigo-600 hover:underline hover:text-indigo-800 transition-colors"
+                  >
+                    {source.title || source.uri}
+                  </a>
+                </li>
+              ))}
+           </ul>
+        </div>
+      )}
     </div>
   );
 };

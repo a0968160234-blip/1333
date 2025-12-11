@@ -1,3 +1,4 @@
+
 export interface User {
   id: string;
   name: string;
@@ -47,6 +48,8 @@ export interface StockHolding {
   averageCost: number;
   currentPrice?: number; // Fetched from API
   lastUpdated?: string;
+  // Google Search Grounding sources
+  sources?: { uri: string; title: string }[];
 }
 
 export interface Category {

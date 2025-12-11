@@ -1,19 +1,11 @@
+
 import { GoogleGenAI } from "@google/genai";
 import { StockHolding } from "../types";
 
-const getClient = () => {
-    const apiKey = process.env.API_KEY;
-    if (!apiKey) {
-        console.warn("API_KEY not found in environment variables.");
-        return null;
-    }
-    return new GoogleGenAI({ apiKey });
-};
-
 export const GeminiService = {
   updateStockPrices: async (holdings: StockHolding[]): Promise<StockHolding[]> => {
-    const ai = getClient();
-    if (!ai) return holdings;
+    // Guideline: Use process.env.API_KEY directly.
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
     const symbols = holdings.map(h => h.symbol).join(', ');
     const prompt = `
@@ -46,10 +38,18 @@ export const GeminiService = {
       
       const priceMap: Record<string, number> = JSON.parse(jsonStr);
 
+      // Guideline: Must extract grounding chunks when using Google Search
+      const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+      const sources = groundingChunks
+        .map((chunk: any) => chunk.web ? { uri: chunk.web.uri, title: chunk.web.title } : null)
+        .filter((s: any) => s !== null);
+
       return holdings.map(h => ({
         ...h,
         currentPrice: priceMap[h.symbol] || h.currentPrice,
-        lastUpdated: new Date().toISOString()
+        lastUpdated: new Date().toISOString(),
+        // Attach sources to the holdings (same sources for the batch query)
+        sources: sources.length > 0 ? sources : h.sources
       }));
 
     } catch (error) {
@@ -59,8 +59,7 @@ export const GeminiService = {
   },
 
   analyzePortfolio: async (holdings: StockHolding[], totalAssets: number) => {
-    const ai = getClient();
-    if (!ai) return "請設定 API Key 以使用 AI 分析功能。";
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
     const portfolioSummary = holdings.map(h => 
       `${h.name} (${h.symbol}): 持有 ${h.shares} 股, 成本 ${h.averageCost}, 現價 ${h.currentPrice}`
