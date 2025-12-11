@@ -1,0 +1,61 @@
+name: Build and Deploy to Firebase
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  # Job 1: Build the Application
+  build_job:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        # Changed from 'npm ci' to 'npm install' because package-lock.json is missing
+        run: npm install
+
+      - name: Build App
+        run: npm run build
+        env:
+          # VITE_API_KEY is required during build time to be embedded in the JS code
+          VITE_API_KEY: ${{ secrets.VITE_API_KEY }}
+
+      - name: Archive Production Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-files
+          path: dist
+
+  # Job 2: Deploy to Firebase (Runs only if Build succeeds)
+  deploy_job:
+    needs: build_job
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-files
+          path: dist
+
+      - name: Deploy to Firebase
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          channelId: live
+          projectId: project-2188675985560412717
+          # Important: We tell it to deploy the dist folder we just downloaded
+          entryPoint: .
