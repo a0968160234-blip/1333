@@ -18,10 +18,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
+          # cache: 'npm'  <-- Removed because package-lock.json does not exist in the repo
 
       - name: Install Dependencies
-        # Changed from 'npm ci' to 'npm install' because package-lock.json is missing
+        # Use npm install instead of npm ci so it works without a lockfile
         run: npm install
 
       - name: Build App
@@ -57,5 +57,4 @@ jobs:
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           channelId: live
           projectId: project-2188675985560412717
-          # Important: We tell it to deploy the dist folder we just downloaded
           entryPoint: .
