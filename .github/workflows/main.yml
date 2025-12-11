@@ -18,7 +18,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          # cache: 'npm'  <-- Removed because package-lock.json does not exist in the repo
+          # cache property removed entirely to avoid "lock file not found" error
 
       - name: Install Dependencies
         # Use npm install instead of npm ci so it works without a lockfile
